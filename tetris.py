@@ -3,10 +3,10 @@ import random
 
 """
 more stuff that could be added
-* press down/space to drop peice
+* press down/space to drop piece
 * display score based on rows cleared
 * levels, which are progessively faster. speed up game based on level
-
+* bug - checking for game over - if new piece doesn't fit, it is not drawn and gap shown at top of screen
 """
 
 root = Tk()
