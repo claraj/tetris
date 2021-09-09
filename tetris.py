@@ -1,10 +1,17 @@
 from tkinter import * 
 import random
 
+"""
+more stuff that could be added
+* press down/space to drop peice
+* display score based on rows cleared
+* levels, which are progessively faster. speed up game based on level
+
+"""
+
 root = Tk()
 
 speed = 500
-
 
 grid_line_color = 'gray'
 background = 'black'
@@ -24,10 +31,7 @@ def make_empty_row():
     return line 
 
 
-grid = []
-for x in range(squares_height):
-    grid.append(make_empty_row())
-
+grid: list 
 
 w = Canvas(root, width=canvas_width, height=canvas_height)
 
@@ -50,15 +54,20 @@ pieces = {
     # 'z': { color: 'purple', orientations: [] },
 }
 
-active_piece_name = random.choice(list(pieces.keys()))
-print(active_piece_name)
-active_piece_info = pieces[active_piece_name]
-active_piece_orientation_index = 0
-active_piece_orientation = active_piece_info['orientations'][active_piece_orientation_index]
 
-active_piece_col = int(squares_width / 2)
-active_piece_row = 0
+# active_piece_name = random.choice(list(pieces.keys()))
+# active_piece_info = pieces[active_piece_name]
+# active_piece_orientation_index = 0
+# active_piece_orientation = active_piece_info['orientations'][active_piece_orientation_index]
+# active_piece_col = int(squares_width / 2)
+# active_piece_row = 0
 
+active_piece_name: str
+active_piece_info: dict
+active_piece_orientation_index: int
+active_piece_orientation: str
+active_piece_col: int
+active_piece_row: int
 
 # print(active_piece_col, active_piece_row)
 
@@ -75,8 +84,15 @@ def start_new_piece():
     active_piece_col = int(squares_width / 2)
     active_piece_row = 0
 
-start_new_piece()
 
+def restart():
+    global grid
+    grid = []
+    for x in range(squares_height):
+        grid.append(make_empty_row())
+    start_new_piece()
+
+restart()
 
 def key_press(event):
 
@@ -86,17 +102,27 @@ def key_press(event):
     print(key)
     if key == 'Left':
         if active_piece_col > 0:
-            active_piece_col -= 1
-        # TODO don't bump into set pieces 
+            if can_move_piece(active_piece_row, active_piece_col-1):
+                active_piece_col -= 1
+        # don't bump into set pieces, use  
     elif key == 'Right':
         active_piece_width = len(active_piece_orientation.split('\n')[0])
         print(active_piece_width, active_piece_col, squares_width)
-        if active_piece_col + active_piece_width  < squares_width : 
-            active_piece_col += 1   # FIXME
+        if active_piece_col + active_piece_width < squares_width:   # if not bump into wall...
+            if can_move_piece(active_piece_row, active_piece_col+1):   # or other set pieces
+                active_piece_col += 1   
         # TODO don't bump into set pieces 
     elif key == 'Up':  # rotate 
-        active_piece_orientation_index = (active_piece_orientation_index + 1) % len(active_piece_info['orientations'])
-        active_piece_orientation = active_piece_info['orientations'][active_piece_orientation_index]
+
+        next_index = (active_piece_orientation_index + 1) % len(active_piece_info['orientations'])
+        next_orientation = active_piece_info['orientations'][next_index]
+
+        if can_move_piece(active_piece_row, active_piece_col, next_orientation):
+            active_piece_orientation_index = (active_piece_orientation_index + 1) % len(active_piece_info['orientations'])
+            active_piece_orientation = active_piece_info['orientations'][active_piece_orientation_index]
+    
+    elif key == 'r':
+        restart()
 
 
 def draw_grid():
@@ -138,6 +164,7 @@ def move_active_piece():
     if can_move_piece(active_piece_row + 1, active_piece_col):
         print('move piece down')
         active_piece_row += 1
+    
         return True
     else:
         print('setting piece in place')
@@ -169,11 +196,16 @@ def can_move_piece(next_row, next_col, next_orientation=None):
 
     print(next_row, next_col)
 
-    piece_height = len(active_piece_orientation.split('\n'))
+    if next_orientation:
+        orientation = next_orientation
+    else:
+        orientation = active_piece_orientation
+
+    piece_height = len(orientation.split('\n'))
     print(f'{piece_height=}')
     # piece_width = len(active_piece_orientation[0])
 
-    if next_row + piece_height > len(grid):   # FIXME hit the bottom? 
+    if next_row + piece_height > len(grid):  
         return False 
     # if next_row < 0:
     #     return False  # is this possible?
@@ -186,7 +218,7 @@ def can_move_piece(next_row, next_col, next_orientation=None):
 
     # TODO differentiate between can't rotate or can't move into wall, vs. has fallen and should be stuck
 
-    component_squares = active_piece_orientation.split('\n')
+    component_squares = orientation.split('\n')
     for row_index, line in enumerate(component_squares):
         for col_index, square in enumerate(line):
             if square == '*':  # this is a part of the active piece
@@ -197,7 +229,7 @@ def can_move_piece(next_row, next_col, next_orientation=None):
                 try:
                     if grid[row_loc][col_loc]:
                         return False 
-                except IndexError:
+                except IndexError:  # ewwwww
                     return False
     return True
 
@@ -211,20 +243,19 @@ def remove_complete_rows():
 
     while index_to_examine > 0:
         row = grid[index_to_examine]
-        if all(row):  # color in each square
+        if all(row):  # is color in each square
             grid.pop(index_to_examine)
             rows_rem -= 1
-            draw_all()
             grid.insert(0, make_empty_row())
-
+            draw_all()
+           
         index_to_examine -= 1
 
     return rows_rem  # for future score
             
 
 def game_over():
-    print('game over?')
-    return can_move_piece(0, int(squares_width / 2))
+    return not can_move_piece(0, int(squares_width / 2))
 
 
 def clear():
@@ -242,6 +273,7 @@ def game_loop():
     
     print('loop')
     was_moved = move_active_piece()
+
     draw_all()
 
     remove_complete_rows()
@@ -250,11 +282,11 @@ def game_loop():
         start_new_piece()
     
     # # FIXME
-    # if game_over():
-    #     print('game is over')
-    #     return 
-    # else:
-    root.after(speed, game_loop)
+    if game_over():
+        print('game is over')
+        return 
+    else:
+        root.after(speed, game_loop)
 
 
 
