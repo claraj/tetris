@@ -2,7 +2,15 @@ from tkinter import *
 import random
 
 """
-more stuff that could be added
+
+Tkinter - no PyGame, no classes, not much math 
+
+Fix the rotation point for shapes, some look weird on rotation - T ?
+Pieces can move L, R too fast if key held down
+Occasional index out of bounds error in can_move_piece
+When a row is completed and cleared, the active piece is drawn in it's set location, then removed on the next tick
+
+more things that could be added
 * press down/space to drop piece
 * display score based on rows cleared
 * levels, which are progessively faster. speed up game based on level
@@ -29,22 +37,35 @@ w.pack()
 grid: list 
 
 pieces = {
-    'square': { 'color': 'red', 'orientations': [
-        '**\n**'
-    ] },
-    't': { 'color': 'green', 'orientations': [
-        '***\n * ', '* \n**\n* ', ' * \n***', ' *\n**\n *'
-    ] },
-    'line': { 'color': 'yellow', 'orientations': [
-        '*\n*\n*\n*', '****',
-    ] },
-    # 'left-l': { color: 'blue', orientations: [] },
-    # 'right-l': { color: 'orange', orientations: [] },
-    # 's': { color: 'pink', orientations: [] },
-    # 'z': { color: 'purple', orientations: [] },
+    'square': {  
+        'color': 'red', 'orientations': 
+            [ '**\n**' ] 
+    },
+    't': { 
+        'color': 'green', 'orientations': 
+            ['***\n * ', '* \n**\n* ', ' * \n***', ' *\n**\n *'] 
+    },
+    'line': { 
+        'color': 'yellow', 'orientations': 
+            ['*\n*\n*\n*', '****', ] 
+    },
+    'left-l': { 
+        'color': 'blue', 'orientations': 
+            ['* \n* \n**', '  *\n***', '**\n *\n *',  '***\n*  '] 
+    },
+    'right-l': { 
+        'color': 'orange', 'orientations': 
+            [ ' *\n *\n**', '***\n  *', '**\n* \n* ',  '  *\n***'] 
+    },
+    's': { 
+        'color': 'lawngreen', 'orientations': 
+        [' **\n** ', '* \n**\n *'] 
+    },
+    'z': { 'color': 'purple', 'orientations': 
+        [ '** \n **', ' *\n**\n* '] 
+    },
 }
 
-active_piece_name: str
 active_piece_info: dict
 active_piece_orientation_index: int
 active_piece_orientation: str
@@ -59,7 +80,6 @@ def initialize_game():
     start_new_piece()
 
 
-
 def make_empty_row():
     line = []
     for y in range(squares_width):
@@ -68,7 +88,7 @@ def make_empty_row():
 
 
 def start_new_piece():
-    global active_piece_row, active_piece_col, active_piece_name, active_piece_info
+    global active_piece_row, active_piece_col, active_piece_info
     global active_piece_orientation, active_piece_orientation_index 
 
     active_piece_name = random.choice(list(pieces.keys()))
@@ -76,25 +96,23 @@ def start_new_piece():
     active_piece_orientation_index = 0
     active_piece_orientation = active_piece_info['orientations'][active_piece_orientation_index]
 
-    active_piece_col = int(squares_width / 2)
+    active_piece_col = int(squares_width / 2) - 2
     active_piece_row = 0
 
 
 def key_press(event):
-
     global active_piece_col, active_piece_orientation, active_piece_orientation_index
 
-    print(event.keysym)
     key = event.keysym   # the letter, or 'Up', 'Down', 'Left', 'Right' ... 
     if key == 'Left':
         if active_piece_col > 0:
-            if can_move_piece(active_piece_row, active_piece_col-1):
+            if can_move_piece(active_piece_row, active_piece_col - 1):
                 active_piece_col -= 1
     
     elif key == 'Right':
         active_piece_width = len(active_piece_orientation.split('\n')[0])
         if active_piece_col + active_piece_width < squares_width:   # if not bump into wall...
-            if can_move_piece(active_piece_row, active_piece_col+1):   # or other set pieces
+            if can_move_piece(active_piece_row, active_piece_col + 1):   # or other set pieces
                 active_piece_col += 1   
     
     elif key == 'Up':  # rotate 
@@ -161,7 +179,7 @@ def remove_complete_rows():
 
     while index_to_examine > 0:
         row = grid[index_to_examine]
-        if all(row):  # is color entered in each square? complete row
+        if all(row):  # is color entered in each square? then this is a complete row
             grid.pop(index_to_examine)
             rows_removed -= 1
             grid.insert(0, make_empty_row())
@@ -169,10 +187,11 @@ def remove_complete_rows():
            
         index_to_examine -= 1
 
-    return rows_removed  # for future score
+    return rows_removed  # for future score feature, based on the number of rows removed. 
             
 
 def game_over():
+    # A new piece added at the start, if it can't move, then the board must be full. 
     return not can_move_piece(0, int(squares_width / 2))
 
 
@@ -180,11 +199,12 @@ def clear():
     w.create_rectangle(0, 0, canvas_width, canvas_height, fill=background)
 
 
-def draw_all():
+def draw_all(show_active_peice=True):
     clear()
     draw_grid()
     draw_current_pieces()
-    draw_active_piece()
+    if show_active_peice:
+        draw_active_piece()
 
 # rows are horizontal. e.g Row 3 defines a position on the Y axis
 # cols are vertical. Col 2 defines a position on the x axis. 
@@ -225,13 +245,13 @@ def game_loop():
         w.create_text(int(canvas_width/2), int(canvas_height/2), text='Game Over\nPress R to restart', font="Courier 20 bold", fill='deeppink')
 
     else:
-        was_moved = move_active_piece()
+        was_moved_down = move_active_piece()
 
         draw_all()
 
         remove_complete_rows()
 
-        if not was_moved:
+        if not was_moved_down:
             start_new_piece()
         
 
